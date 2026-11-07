@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/gameweave/schemas/workspace.schema.json",
+  "packages": ["games/*", "modules/*"],
+  "license": {
+    "allow": ["Apache-2.0"],
+    "assetsAllow": ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"]
+  }
+}

@@ -1,0 +1,4 @@
+# Pins the registry this workspace validates, checks and publishes against, so a
+# contributor's personal ~/.gameweaverc (pointing at a local stack, say) cannot
+# leak into a run here. npm-style key=value lines; JSON is not read.
+registry=https://registry-api.gameweave.com
