@@ -79,9 +79,17 @@ jobs:
               exit 1
               ;;
           esac
-          if [ "$SCOPE" = changed ] && [ -n "$BASE_REF" ]; then
-            git fetch --no-tags origin "$BASE_REF"
+          # fetch-depth: 0 already fetched every branch, so origin/<base>
+          # exists without a second fetch. A second fetch would also be
+          # anonymous (persist-credentials: false), which a private caller's
+          # repository refuses. If the ref is somehow missing, check
+          # everything rather than less.
+          if [ "$SCOPE" = changed ] && [ -n "$BASE_REF" ] &&
+            git rev-parse --verify --quiet "origin/$BASE_REF" > /dev/null; then
             echo "selection=--changed-since=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
+          elif [ "$SCOPE" = changed ] && [ -n "$BASE_REF" ]; then
+            echo "::warning::origin/$BASE_REF is not available; checking every package"
+            echo "selection=--all" >> "$GITHUB_OUTPUT"
           else
             echo "selection=--all" >> "$GITHUB_OUTPUT"
           fi
