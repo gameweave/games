@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# gameweave CLI
+# Registry module cache (gameweave.workspace.json `moduleCache`)
+.gameweave/
+# Packed archives (`gameweave pack`)
+*.bfpkg

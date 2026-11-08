@@ -1,0 +1,76 @@
+name: Publish
+
+# Publishes every package version in the workspace that the registry does not
+# have yet, after CI passes on main. `gameweave publish --all` is idempotent
+# over the whole workspace, so a run that is skipped or evicted from the
+# concurrency queue loses nothing: the next successful run publishes whatever
+# is still pending.
+#
+# OFF until a human enables it. The job runs only when the repository variable
+# PUBLISH_ENABLED is 'true'. That variable, the `production` environment
+# (deployment branches: main only) and its GAMEWEAVE_TOKEN secret are created by
+# hand, and PUBLISH_ENABLED is set only for the first publish run. Until then
+# every trigger evaluates to a skipped job and nothing reaches the registry.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # workflow_run's `branches` filter matches the head branch NAME, which a
+    # pull request from a fork can also call `main`; requiring a push to this
+    # repository keeps a fork's code away from the production token.
+    if: >-
+      vars.PUBLISH_ENABLED == 'true' &&
+      github.repository_owner == 'gameweave' &&
+      ((github.event_name == 'workflow_dispatch' &&
+        github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+
+      - name: Publish every unpublished version
+        env:
+          GAMEWEAVE_TOKEN: ${{ secrets.GAMEWEAVE_TOKEN }}
+        run: |
+          set +e
+          npx gameweave publish --all --wait --json > publish-report.json
+          code=$?
+          set -e
+          node -e "const r=require('./publish-report.json');for(const k of ['published','held','rejected','failed','blocked','timedOut'])console.log(k+': '+(r[k]||[]).map(p=>p.name+'@'+p.version).join(', '))" >> "$GITHUB_STEP_SUMMARY" || echo '::warning::No publish report was written (the CLI exited before planning).'
+          case "$code" in
+            0) ;;
+            3) echo "::warning::Versions are held for staff review — see the summary; release them in the admin publishing console." ;;
+            4) echo "::error::Versions still processing at the deadline. Re-run this workflow; it is idempotent."; exit 1 ;;
+            5) echo "::error::GAMEWEAVE_TOKEN is invalid, expired, or from the wrong account. Rotate it (docs: README#publishing)."; exit 1 ;;
+            *) exit "$code" ;;
+          esac

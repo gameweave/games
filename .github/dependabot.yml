@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # The toolchain only. A `gameweave` bump changes package.json, which selects
+  # every package under --changed-since, so its PR validates, tests and checks
+  # the whole workspace under the new engine before it can merge.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: gameweave
+      - dependency-name: prettier
+      - dependency-name: sharp
+    commit-message:
+      prefix: 'chore(toolchain)'
+  # Actions are pinned to commit SHAs; Dependabot moves the SHA and its
+  # version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(ci)'

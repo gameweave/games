@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Required status check: `boardlang / Validate · Test · Check`.
+  boardlang:
+    uses: ./.github/workflows/boardlang-ci.yml
+    permissions:
+      contents: read
+    with:
+      scope: ${{ github.event_name == 'pull_request' && 'changed' || 'all' }}
