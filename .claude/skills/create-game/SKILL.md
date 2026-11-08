@@ -235,6 +235,7 @@ npx gameweave check --changed-since origin/main
 npx gameweave simulate --game games/<game_name>/<game_name>.boardlang --modules modules
 npx gameweave fmt games/<game_name>
 npx gameweave lint games/<game_name> --max-warnings 0
+npm run boardlang:fmt:check && npm run boardlang:lint   # what CI runs
 npm run format:check
 ```
 
