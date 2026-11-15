@@ -1,5 +1,13 @@
 name: CI
 
+# Formats, lints, validates, tests and checks this workspace's boardlang
+# packages. Self-contained on purpose: no other repository calls this file and
+# it calls none, so a change to CI here is a change to this repository alone.
+#
+# The required status check is `Boardlang`.
+#
+# It takes no secrets and needs none: every registry read it makes is public.
+
 on:
   pull_request:
   push:
@@ -13,10 +21,73 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Required status check: `boardlang / Validate · Test · Check`.
   boardlang:
-    uses: ./.github/workflows/boardlang-ci.yml
+    name: Boardlang
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
-    with:
-      scope: ${{ github.event_name == 'pull_request' && 'changed' || 'all' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # --changed-since needs the merge base
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .gameweave/modules
+          key: gameweave-modules-${{ hashFiles('**/boardlang.json') }}
+          restore-keys: gameweave-modules-
+
+      - name: Resolve scope
+        id: scope
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # A pull request checks the packages it changed, plus every package
+          # that depends on them; a push to main checks everything.
+          # fetch-depth: 0 already fetched origin/<base>. If it is somehow
+          # missing, check everything rather than less.
+          if [ -n "$BASE_REF" ] &&
+            git rev-parse --verify --quiet "origin/$BASE_REF" > /dev/null; then
+            echo "selection=--changed-since=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
+          elif [ -n "$BASE_REF" ]; then
+            echo "::warning::origin/$BASE_REF is not available; checking every package"
+            echo "selection=--all" >> "$GITHUB_OUTPUT"
+          else
+            echo "selection=--all" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Formatting and lint read every .boardlang file: both are fast, and a
+      # file left out of shape is no less wrong for sitting in an unchanged
+      # package.
+      - name: Boardlang formatting
+        run: npm run boardlang:fmt:check
+
+      - name: Boardlang lint
+        run: npm run boardlang:lint
+
+      - name: gameweave validate
+        env:
+          SELECTION: ${{ steps.scope.outputs.selection }}
+        run: npx gameweave validate "$SELECTION"
+
+      - name: gameweave test
+        env:
+          SELECTION: ${{ steps.scope.outputs.selection }}
+        run: npx gameweave test "$SELECTION"
+
+      - name: gameweave check
+        env:
+          SELECTION: ${{ steps.scope.outputs.selection }}
+        run: npx gameweave check "$SELECTION"
+
+      - name: Formatting (markdown, JSON, YAML)
+        run: npm run format:check

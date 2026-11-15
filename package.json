@@ -10,6 +10,10 @@
     "validate": "gameweave validate --all",
     "test": "gameweave test --all",
     "check": "gameweave check --all",
+    "boardlang:fmt": "gameweave fmt games modules",
+    "boardlang:fmt:check": "gameweave fmt --check games modules",
+    "boardlang:lint": "gameweave lint --max-warnings 0 games modules",
+    "boardlang:lint:fix": "gameweave lint --fix games modules",
     "format": "prettier --write \"**/*.{md,json,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{md,json,yml,yaml}\""
   },

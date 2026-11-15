@@ -386,8 +386,10 @@ blocks (BL904). A rule that fires on something deliberate takes a disable
 comment with a reason:
 `// boardlang-lint-disable-next-line no-unused-import -- <what the import provides>`.
 
-CI does not gate boardlang formatting or lint in this repository yet; reviewers
-will ask for both. Prettier formats the markdown and JSON here
+CI gates both over every `.boardlang` file in the repository
+(`npm run boardlang:fmt:check`, `npm run boardlang:lint`, which allows no
+warnings). `npm run boardlang:fmt` and `npm run boardlang:lint:fix` fix the
+whole repository at once. Prettier formats the markdown and JSON here
 (`npm run format`) and never touches `.boardlang`.
 
 ## Package version — bump on every content change

@@ -12,10 +12,9 @@ publishes them — no application or engine code. The `gameweave` CLI
 - `modules/<name>/` — a module games import (decks, dice, shared queries)
 - `gameweave.workspace.json` — declares the workspace: package globs and the
   license policy (`Apache-2.0`, plus CC asset licenses for dual-licensed art)
-- `.github/workflows/boardlang-ci.yml` — the reusable CI workflow, also called by
-  other gameweave workspaces pinned to a commit SHA; `ci.yml` calls it here;
-  `publish.yml` publishes from `main` (switched off by the `PUBLISH_ENABLED`
-  repository variable until enabled by a maintainer)
+- `.github/workflows/ci.yml` — CI, self-contained (no other repository calls
+  it, and it calls none); `publish.yml` publishes from `main` (switched off by
+  the `PUBLISH_ENABLED` repository variable until enabled by a maintainer)
 
 ## Commands
 
@@ -24,6 +23,8 @@ npm ci
 npm run validate          # gameweave validate --all
 npm test                  # gameweave test --all
 npm run check             # gameweave check --all
+npm run boardlang:fmt     # gameweave fmt: rewrite every .boardlang file
+npm run boardlang:lint    # gameweave lint --max-warnings 0 (boardlang:lint:fix applies safe fixes)
 npm run format            # prettier: markdown, JSON, YAML (never .boardlang)
 npx gameweave <validate|test|check> --package <a,b>       # some packages
 npx gameweave <validate|test|check> --changed-since origin/main
@@ -31,8 +32,10 @@ npx gameweave simulate --game games/<g>/<g>.boardlang --modules modules
 npx gameweave fmt games/<g>  &&  npx gameweave lint games/<g>
 ```
 
-CI runs `validate`, `test` and `check` with `--changed-since` the base branch on
-a pull request, `--all` on `main`, then `npm run format:check`.
+CI (the required check is `Boardlang`) runs `boardlang:fmt:check` and
+`boardlang:lint` over every `.boardlang` file, then `validate`, `test` and
+`check` with `--changed-since` the base branch on a pull request and `--all` on
+`main`, then `npm run format:check`.
 
 ## Rules
 
